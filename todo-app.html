@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Index — A Task List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDEAE0;
+    --card: #FAF8F2;
+    --ink: #232620;
+    --ink-soft: #6B6A5F;
+    --line: #D8D4C6;
+    --teal: #2F6F5E;
+    --teal-soft: #2F6F5E1A;
+    --red: #B23A2E;
+    --shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 20px -12px rgba(35,38,32,.25);
+    color-scheme: light;
+  }
+  *,*::before,*::after{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height: 100vh;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgba(35,38,32,.06) 1px, transparent 0);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: "IBM Plex Sans", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: clamp(1.5rem, 5vw, 4rem) 1rem;
+  }
+  .app{
+    width: 100%;
+    max-width: 560px;
+  }
+  header.app-head{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  header.app-head h1{
+    font-family: "Caveat", cursive;
+    font-size: 2.6rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1;
+  }
+  header.app-head .date{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  form#addForm{
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1.1rem;
+  }
+  #taskInput{
+    flex: 1;
+    font: inherit;
+    font-size: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+  #taskInput:focus-visible{ outline: 2px solid var(--teal); outline-offset: 1px; }
+  #taskInput::placeholder{ color: var(--ink-soft); }
+
+  button{ font: inherit; cursor: pointer; }
+
+  .btn-add{
+    flex: 0 0 auto;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 8px;
+    padding: 0.85rem 1.3rem;
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, background .15s ease;
+  }
+  .btn-add:hover{ transform: translateY(-1px); background: var(--teal); }
+  .btn-add:active{ transform: translateY(0); }
+
+  .toolbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.9rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .filters{
+    display: inline-flex;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px;
+    box-shadow: var(--shadow);
+  }
+  .filters button{
+    border: none;
+    background: none;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    color: var(--ink-soft);
+    transition: background .15s ease, color .15s ease;
+  }
+  .filters button.is-active{
+    background: var(--teal);
+    color: #fff;
+  }
+  .count{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+  }
+
+  ul#taskList{
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .task{
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem 0.9rem;
+    box-shadow: var(--shadow);
+    animation: settle .22s ease both;
+  }
+  @keyframes settle{
+    from{ opacity: 0; transform: translateY(-4px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+
+  .task-check{
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--ink-soft);
+    border-radius: 5px;
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .task-check svg{
+    width: 13px; height: 13px;
+    stroke: #fff;
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    transition: stroke-dashoffset .2s ease;
+  }
+  .task.is-done .task-check{
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+  .task.is-done .task-check svg{ stroke-dashoffset: 0; }
+
+  .task-text{
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.45;
+    padding-top: 0.05rem;
+    word-break: break-word;
+    outline: none;
+  }
+  .task.is-done .task-text{
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    text-decoration-thickness: 2px;
+  }
+  .task-text[contenteditable="true"]{
+    background: var(--teal-soft);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+    margin: -0.05rem -0.3rem;
+  }
+
+  .task-actions{
+    flex: 0 0 auto;
+    display: flex;
+    gap: 0.3rem;
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+  .task:hover .task-actions,
+  .task:focus-within .task-actions{ opacity: 1; }
+  .task-actions button{
+    width: 28px; height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s ease, color .15s ease;
+  }
+  .task-actions button:hover{ background: var(--paper); color: var(--ink); }
+  .task-actions .delete-btn:hover{ color: var(--red); }
+  .task-actions svg{ width: 15px; height: 15px; }
+
+  .empty-state{
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+  }
+
+  footer.app-foot{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding-top: 0.5rem;
+  }
+  .clear-btn{
+    background: none;
+    border: none;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0.2rem 0;
+  }
+  .clear-btn:hover{ color: var(--red); }
+  .clear-btn:disabled{ opacity: 0.35; text-decoration: none; cursor: default; }
+
+  .persist-note{
+    margin-top: 2rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app-head">
+    <h1>Index</h1>
+    <span class="date" id="todayDate"></span>
+  </header>
+
+  <form id="addForm" autocomplete="off">
+    <input type="text" id="taskInput" placeholder="What needs doing?" maxlength="200" aria-label="New task">
+    <button type="submit" class="btn-add">Add</button>
+  </form>
+
+  <div class="toolbar">
+    <div class="filters" role="tablist" aria-label="Filter tasks">
+      <button type="button" data-filter="all" class="is-active" role="tab" aria-selected="true">ALL</button>
+      <button type="button" data-filter="active" role="tab" aria-selected="false">ACTIVE</button>
+      <button type="button" data-filter="completed" role="tab" aria-selected="false">DONE</button>
+    </div>
+    <span class="count" id="itemsLeft">0 left</span>
+  </div>
+
+  <ul id="taskList"></ul>
+
+  <footer class="app-foot">
+    <span class="count" id="totalCount">0 tasks total</span>
+    <button type="button" class="clear-btn" id="clearCompleted">Clear completed</button>
+  </footer>
+
+  <p class="persist-note">Tasks save to this browser's local storage automatically.<br>Note: in Claude's in-chat preview, storage is sandboxed per session — download the file and open it directly for persistence across reloads.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "todo.tasks.v1";
+
+  /* ---------- state ---------- */
+  let tasks = loadTasks();
+  let currentFilter = "all"; // "all" | "active" | "completed"
+
+  /* ---------- persistence ---------- */
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.warn("Could not read saved tasks, starting fresh.", err);
+      return [];
+    }
+  }
+
+  function saveTasks() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (err) {
+      console.warn("Could not save tasks to local storage.", err);
+    }
+  }
+
+  /* ---------- helpers ---------- */
+  function makeId() {
+    return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function getFilteredTasks() {
+    if (currentFilter === "active") return tasks.filter(t => !t.completed);
+    if (currentFilter === "completed") return tasks.filter(t => t.completed);
+    return tasks;
+  }
+
+  /* ---------- CRUD ---------- */
+  function addTask(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    tasks.unshift({ id: makeId(), text: trimmed, completed: false, createdAt: Date.now() });
+    saveTasks();
+    render();
+  }
+
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.completed = !task.completed;
+    saveTasks();
+    render();
+  }
+
+  function updateTaskText(id, newText) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const trimmed = newText.trim();
+    if (!trimmed) {
+      deleteTask(id);
+      return;
+    }
+    task.text = trimmed;
+    saveTasks();
+    render();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+  }
+
+  function clearCompleted() {
+    tasks = tasks.filter(t => !t.completed);
+    saveTasks();
+    render();
+  }
+
+  /* ---------- DOM building ---------- */
+  const listEl = document.getElementById("taskList");
+  const itemsLeftEl = document.getElementById("itemsLeft");
+  const totalCountEl = document.getElementById("totalCount");
+  const clearBtn = document.getElementById("clearCompleted");
+
+  const checkIconSVG = '<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+  const editIconSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5l4 4L8 20H4v-4z"/></svg>';
+  const trashIconSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+
+  function buildTaskNode(task) {
+    const li = document.createElement("li");
+    li.className = "task" + (task.completed ? " is-done" : "");
+    li.dataset.id = task.id;
+
+    const check = document.createElement("button");
+    check.type = "button";
+    check.className = "task-check";
+    check.setAttribute("aria-label", task.completed ? "Mark as active" : "Mark as complete");
+    check.dataset.action = "toggle";
+    check.innerHTML = checkIconSVG;
+
+    const text = document.createElement("div");
+    text.className = "task-text";
+    text.textContent = task.text;
+    text.setAttribute("data-action", "text");
+    text.title = "Double-click to edit";
+
+    const actions = document.createElement("div");
+    actions.className = "task-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "edit-btn";
+    editBtn.dataset.action = "edit";
+    editBtn.setAttribute("aria-label", "Edit task");
+    editBtn.innerHTML = editIconSVG;
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "delete-btn";
+    delBtn.dataset.action = "delete";
+    delBtn.setAttribute("aria-label", "Delete task");
+    delBtn.innerHTML = trashIconSVG;
+
+    actions.append(editBtn, delBtn);
+    li.append(check, text, actions);
+    return li;
+  }
+
+  function render() {
+    const filtered = getFilteredTasks();
+
+    listEl.innerHTML = "";
+
+    if (filtered.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "empty-state";
+      empty.style.listStyle = "none";
+      empty.textContent =
+        tasks.length === 0
+          ? "Nothing here yet — add your first task above."
+          : currentFilter === "completed"
+          ? "No completed tasks."
+          : "No active tasks. Nicely done.";
+      listEl.appendChild(empty);
+    } else {
+      const fragment = document.createDocumentFragment();
+      filtered.forEach(task => fragment.appendChild(buildTaskNode(task)));
+      listEl.appendChild(fragment);
+    }
+
+    const activeCount = tasks.filter(t => !t.completed).length;
+    const completedCount = tasks.length - activeCount;
+    itemsLeftEl.textContent = `${activeCount} left`;
+    totalCountEl.textContent = `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} total`;
+    clearBtn.disabled = completedCount === 0;
+  }
+
+  /* ---------- editing ---------- */
+  function startEdit(li) {
+    const textEl = li.querySelector(".task-text");
+    const id = li.dataset.id;
+    textEl.setAttribute("contenteditable", "true");
+    textEl.focus();
+
+    const range = document.createRange();
+    range.selectNodeContents(textEl);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    function finish(save) {
+      textEl.removeAttribute("contenteditable");
+      textEl.removeEventListener("blur", onBlur);
+      textEl.removeEventListener("keydown", onKeydown);
+      if (save) {
+        updateTaskText(id, textEl.textContent);
+      } else {
+        render();
+      }
+    }
+
+    function onBlur() { finish(true); }
+    function onKeydown(e) {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    }
+
+    textEl.addEventListener("blur", onBlur);
+    textEl.addEventListener("keydown", onKeydown);
+  }
+
+  /* ---------- event delegation ---------- */
+  listEl.addEventListener("click", (e) => {
+    const actionEl = e.target.closest("[data-action]");
+    if (!actionEl) return;
+    const li = e.target.closest(".task");
+    if (!li) return;
+    const id = li.dataset.id;
+    const action = actionEl.dataset.action;
+
+    if (action === "toggle") toggleTask(id);
+    if (action === "delete") deleteTask(id);
+    if (action === "edit") startEdit(li);
+  });
+
+  listEl.addEventListener("dblclick", (e) => {
+    const textEl = e.target.closest(".task-text");
+    if (!textEl) return;
+    const li = e.target.closest(".task");
+    if (li) startEdit(li);
+  });
+
+  document.getElementById("addForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("taskInput");
+    addTask(input.value);
+    input.value = "";
+    input.focus();
+  });
+
+  document.querySelectorAll(".filters button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll(".filters button").forEach(b => {
+        b.classList.toggle("is-active", b === btn);
+        b.setAttribute("aria-selected", b === btn ? "true" : "false");
+      });
+      render();
+    });
+  });
+
+  clearBtn.addEventListener("click", clearCompleted);
+
+  /* ---------- init ---------- */
+  document.getElementById("todayDate").textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "long", month: "long", day: "numeric"
+  });
+
+  if (tasks.length === 0) {
+    tasks = [
+      { id: makeId(), text: "Double-click any task to edit it", completed: false, createdAt: Date.now() },
+      { id: makeId(), text: "Check a task off to mark it complete", completed: true, createdAt: Date.now() },
+      { id: makeId(), text: "Use the filters above to focus your view", completed: false, createdAt: Date.now() }
+    ];
+    saveTasks();
+  }
+
+  render();
+})();
+</script>
+
+</body>
+</html>
